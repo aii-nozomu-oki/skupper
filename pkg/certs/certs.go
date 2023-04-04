@@ -70,12 +70,25 @@ func decodeDataElement(in []byte, name string) []byte {
 	return block.Bytes
 }
 
+func parsePrivateKey(der []byte) (any, error) {
+	var key any
+	key, err := x509.ParsePKCS1PrivateKey(der)
+	if err != nil {
+		if err.Error() == "x509: failed to parse private key (use ParsePKCS8PrivateKey instead for this key format)" {
+			return x509.ParsePKCS8PrivateKey(der)
+		} else {
+			return nil, err
+		}
+	}
+	return key, nil
+}
+
 func getCAFromSecret(secret *corev1.Secret) CertificateAuthority {
 	cert, err := x509.ParseCertificate(decodeDataElement(secret.Data["tls.crt"], "certificate"))
 	if err != nil {
 		log.Fatal("failed to get CA certificate from secret")
 	}
-	key, err := x509.ParsePKCS1PrivateKey(decodeDataElement(secret.Data["tls.key"], "private key"))
+	key, err := parsePrivateKey(decodeDataElement(secret.Data["tls.key"], "private key"))
 	if err != nil {
 		log.Fatal("failed to get CA private key from secret", err)
 	}
