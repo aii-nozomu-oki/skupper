@@ -784,7 +784,7 @@ func restoreServiceDefinitions(cli *client.VanClient, name string) error {
 }
 
 func (m *DefinitionMonitor) processNextEvent() bool {
-
+	fmt.Println("processNextEvent")
 	obj, shutdown := m.events.Get()
 
 	if shutdown {
@@ -925,20 +925,24 @@ func (m *DefinitionMonitor) processNextEvent() bool {
 					}
 				}
 			case "deployments":
+				fmt.Println("process deployments")
 				event.Recordf(DefinitionMonitorEvent, "deployment event for %s", name)
 				obj, exists, err := m.deploymentInformer.GetStore().GetByKey(name)
 				if err != nil {
 					return fmt.Errorf("Error reading deployment %s from cache: %s", name, err)
 				} else if exists {
+					fmt.Println("exists")
 					deployment, ok := obj.(*appsv1.Deployment)
 					if !ok {
 						return fmt.Errorf("Expected Deployment for %s but got %#v", name, obj)
 					}
-
+					fmt.Println("getServiceDefinitionFromAnnotatedDeployment")
 					desired, ok := m.getServiceDefinitionFromAnnotatedDeployment(deployment)
 					if ok {
+						fmt.Println("ok")
 						event.Recordf(DefinitionMonitorEvent, "Checking annotated deployment %s", name)
 						actual, ok := m.annotated[desired.Address]
+						fmt.Println("updateAnnotatedServiceDefinition")
 						if !ok || updateAnnotatedServiceDefinition(&actual, &desired) {
 							event.Recordf(DefinitionMonitorUpdateEvent, "Updating service definition for annotated deployment %s to %#v", name, desired)
 							changed := []types.ServiceInterface{
@@ -965,12 +969,14 @@ func (m *DefinitionMonitor) processNextEvent() bool {
 						}
 
 					} else {
+						fmt.Println("deleteServiceDefinitionForAnnotatedObject 1")
 						err := m.deleteServiceDefinitionForAnnotatedObject(name, DeploymentObjectType, m.annotatedObjects)
 						if err != nil {
 							return fmt.Errorf("Failed to delete service definition on deployment %s which is no longer annotated: %s", name, err)
 						}
 					}
 				} else {
+					fmt.Println("deleteServiceDefinitionForAnnotatedObject 2")
 					err := m.deleteServiceDefinitionForAnnotatedObject(name, DeploymentObjectType, m.annotatedObjects)
 					if err != nil {
 						return fmt.Errorf("Failed to delete service definition on removal of previously annotated deployment %s: %s", name, err)
